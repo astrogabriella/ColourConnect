@@ -2,6 +2,10 @@
 
 let emptySquares = -1;
 let gameGridArray = new Array(3); // inits new array each idx is a row
+let gameOver  
+
+let computerMoves = [];
+let playerMoves = [];
 
 for (let i = 0; i < 3; i++) {
   gameGridArray[i] = new Array(3).fill(0); // add a new row of the length 3
@@ -37,33 +41,51 @@ function handlePlayerInput(e) {
     emptySquares -= 1;
     square.classList.remove("gameSquare");
     square.classList.add("gameSquarePlayer1");
+
+    // adds to the play history
+    playerMoves.push(square);
     let cell = square.id[square.id.length - 1];
     console.log(cell);
     let [col, row] = setCellState(cell, 1);
+
+    if (hasPlayerWon(1, cell)) {
+          playerMoves.forEach(sq => sq.classList.add("gamePlayWon"))
+    }
+
     setTimeout(computerTurn, 1000);
+    console.log(gameGridArray);
   } else {
     console.log("square was taken");
   }
 }
 
 function computerTurn() {
-while (true && emptySquares > 0)
-{ 
+  while (true && emptySquares > 0) {
+    let cell = Math.floor(Math.random() * 9);
+    console.log(cell);
+    let square = document.getElementById(`square${cell}`);
 
-  let cell = Math.floor(Math.random() * 9);
-  console.log(cell);
-  let square = document.getElementById(`square${cell}`);
+    // checks if
+    if (square.classList.contains("gameSquare")) {
+      let [col, row] = setCellState(cell, 2);
+      // adds to the play history
+      computerMoves.push(square);
+      square.classList.remove("gameSquare");
+      square.classList.add("gameSquarePlayer2");
+      emptySquares -= 1;
 
-  if (square.classList.contains("gameSquare")) {
-    let [col, row] = setCellState(cell, 2);
-    square.classList.remove("gameSquare");
-    square.classList.add("gameSquarePlayer2");
-    emptySquares -=1;
-    return;
-  } else {
-    console.log("computer chose taken square");
+      if (hasPlayerWon(2, cell)) {
+        for (let i = 0; i < computerMoves.length; i++) {}
+
+          computerMoves.forEach(sq => sq.classList.add("gamePlayWon"))
+        // handle Computer Victory
+      }
+
+      return;
+    } else {
+      console.log("computer chose taken square");
+    }
   }
- }
 }
 
 function setCellState(cell, player) {
@@ -72,4 +94,39 @@ function setCellState(cell, player) {
   gameGridArray[row][col] = player;
   console.log(col, row, `player: ${player}`);
   return [col, row];
+}
+
+function hasPlayerWon(player, cell) {
+  let col = cell % 3;
+  let row = Math.floor(cell / 3);
+
+  // check all the squares in the same row
+  
+  let isCompleteRow = true;
+  
+  for (let i = 0; i < 3; i++) {
+    if (gameGridArray[row][i] != player) {
+      isCompleteRow = false;
+      break;
+    }
+  }
+
+  let isCompleteColumn = true;
+
+  for (let i=0; i < 3; i++){
+    // check all the squares in the same column
+    if (gameGridArray[i][col] != player) {
+     isCompleteColumn = false;
+     break; 
+    }
+  }
+
+  if (isCompleteColumn || isCompleteRow){
+
+  console.log("Winner", player)
+  return true;
+  } else {
+    return false;
+  }
+
 }
