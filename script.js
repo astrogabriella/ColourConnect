@@ -2,7 +2,8 @@
 
 let emptySquares = -1;
 let gameGridArray = new Array(3); // inits new array each idx is a row
-let gameOver  
+let gameOver = false;
+let celTosSquareIdMap = new Map();
 
 let computerMoves = [];
 let playerMoves = [];
@@ -22,6 +23,9 @@ function gameGridSetup(dim) {
     square.setAttribute("id", `square${i}`);
     square.setAttribute("onClick", "handlePlayerInput(event)");
     gridBody.appendChild(square);
+    celTosSquareIdMap.set(i, square);
+
+    // points on the diagonal
   }
 
   emptySquares = dim ** 2;
@@ -37,7 +41,7 @@ window.addEventListener("DOMContentLoaded", () => {
 function handlePlayerInput(e) {
   let square = e.target;
 
-  if (emptySquares % 2 == 1 && square.classList.contains("gameSquare")) {
+  if (!gameOver && emptySquares % 2 == 1 && square.classList.contains("gameSquare")) {
     emptySquares -= 1;
     square.classList.remove("gameSquare");
     square.classList.add("gameSquarePlayer1");
@@ -49,7 +53,8 @@ function handlePlayerInput(e) {
     let [col, row] = setCellState(cell, 1);
 
     if (hasPlayerWon(1, cell)) {
-          playerMoves.forEach(sq => sq.classList.add("gamePlayWon"))
+      playerMoves.forEach((sq) => sq.classList.add("gamePlayWon"));
+      gameOver = true;
     }
 
     setTimeout(computerTurn, 1000);
@@ -60,7 +65,7 @@ function handlePlayerInput(e) {
 }
 
 function computerTurn() {
-  while (true && emptySquares > 0) {
+  while (!gameOver && emptySquares > 0) {
     let cell = Math.floor(Math.random() * 9);
     console.log(cell);
     let square = document.getElementById(`square${cell}`);
@@ -77,8 +82,9 @@ function computerTurn() {
       if (hasPlayerWon(2, cell)) {
         for (let i = 0; i < computerMoves.length; i++) {}
 
-          computerMoves.forEach(sq => sq.classList.add("gamePlayWon"))
+        computerMoves.forEach((sq) => sq.classList.add("gamePlayWon"));
         // handle Computer Victory
+        gameOver = true;
       }
 
       return;
@@ -100,33 +106,140 @@ function hasPlayerWon(player, cell) {
   let col = cell % 3;
   let row = Math.floor(cell / 3);
 
+  let winningList = [];
+
   // check all the squares in the same row
-  
   let isCompleteRow = true;
-  
+
   for (let i = 0; i < 3; i++) {
     if (gameGridArray[row][i] != player) {
       isCompleteRow = false;
       break;
     }
+    winningList.push(celTosSquareIdMap.get(row*3+col))
+  }
+  if (isCompleteRow) {
+    console.log("Winner", player);
+    return true;
   }
 
   let isCompleteColumn = true;
 
-  for (let i=0; i < 3; i++){
+  for (let i = 0; i < 3; i++) {
     // check all the squares in the same column
     if (gameGridArray[i][col] != player) {
-     isCompleteColumn = false;
-     break; 
+      isCompleteColumn = false;
+      break;
+    }
+    winningList.push(celTosSquareIdMap.get(row*3+col))
+  }
+  if (isCompleteColumn) {
+    console.log("Winner", player);
+    return true;
+  }
+
+  // check diagnonals
+
+  // top left to bottom right will check if the diagonal passing through (row, col) can have a length of at least 3
+  let aboveDiagonalLengthTLBR = Math.min(col, row);
+  let belowDiagnonalLengthTLBR = Math.min(2 - col, 2 - row);
+
+  if (aboveDiagonalLengthTLBR + belowDiagnonalLengthTLBR + 1 >= 3) {
+    let c = checkDiagonals(col, row, true, player);
+    console.log("diagonal:", c);
+    if (c == 3){
+      return true;
     }
   }
 
-  if (isCompleteColumn || isCompleteRow){
+  // bottom left to top right will check if the antidiagonal passing through (row, col) can have a length of at least 3
+  let aboveDiagonalLengthBLTR = Math.min(2 - col, row);
+  let belowDiagnonalLengthBLTR = Math.min(col, 2 - row);
 
-  console.log("Winner", player)
-  return true;
-  } else {
-    return false;
+  if (aboveDiagonalLengthBLTR + belowDiagnonalLengthBLTR + 1 >= 3) {
+    let c = checkDiagonals(col, row, false, player)
+    console.log("antidiagonal:", c);
+    if (c == 3){
+      return true;
+    }
+
+
+
   }
 
+  return false;
+}
+
+
+// diag == true diagnonal diag == false antidiagonal
+/*
+This works like this starting from the (row, col) position check the cels left above and right below and in each iteration check one further 
+*/
+function checkDiagonals(col, row, diag, player) {
+  let i = 1;
+  let count = 1;
+  let prev = 1;
+
+  let continious1 = true;
+  let continious2 = true;
+
+
+  while (true) {
+    if (diag) {
+      // diagonal
+      if ( continious1 &&
+        col - i >= 0 &&
+        row - i >= 0 &&
+        gameGridArray[row - i][col - i] === player
+      ) {
+        count++;
+      } else {
+
+        continious1 = false;
+      }
+
+      if (continious2 &&
+        col + i < gameGridArray.length &&
+        row + i < gameGridArray.length &&
+        gameGridArray[row + i][col + i] === player
+      ) {
+        count++;
+
+      }else {
+
+        continious2 = false;
+      }
+    }
+    // same check but for the antidiagonal
+    else {
+      if ( continious1 &&
+        col + i <= gameGridArray.length &&
+        row - i >= 0 &&
+        gameGridArray[row - i][col + i] === player
+      ) {
+        count++;
+        continious1 = false;
+      }
+      if ( continious2 &&
+        col - i >= 0 &&
+        row + i < gameGridArray.length &&
+        gameGridArray[row + i][col - i] === player
+      ) {
+        count++;
+      } else {
+        continious2 = false;
+      }
+    }
+    if (prev == count){
+      return count;
+    }
+ /** *
+    if (i >= 3){
+      console.log("error");
+      return -1;
+    }
+*/
+    prev = count;
+    i++;
+  }
 }
